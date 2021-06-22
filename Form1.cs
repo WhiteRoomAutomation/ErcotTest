@@ -33,7 +33,7 @@ namespace ErcotTest
             config.Save(ConfigurationSaveMode.Modified);
             ConfigurationManager.RefreshSection("system.net/settings");*/
 
-            var url = "http://www.ercot.com/content/cdr/html/real_time_spp";
+            var url = "http://www.ercot.com/content/cdr/html/current_np6788";
             var web = new HtmlWeb();
             var doc = web.Load(url);
             foreach (var tNode in doc.DocumentNode.SelectNodes("//table"))
@@ -41,26 +41,39 @@ namespace ErcotTest
                 DataTable dt1 = new DataTable();
                 Console.WriteLine(tNode.Name);
 
-                foreach (var hNode in tNode.SelectNodes("//th"))
-                {
-                    //Console.WriteLine(hNode.InnerText);
-                    dt1.Columns.Add(hNode.InnerText, typeof(string));
+
+                try
+                {               
+
+                    //foreach (var hNode in tNode.SelectNodes("//th"))
+                    foreach (var hNode in tNode.SelectNodes("//td[@class='headerValueClass']"))
+                    {
+                        //Console.WriteLine(hNode.InnerText);
+                        dt1.Columns.Add(hNode.InnerText, typeof(string));
+                    }
+                    var Rows = tNode.Descendants("tr")
+                        .Where(tr => tr.Elements("td").Count() > 1)
+                        .Select(tr => tr.Elements("td").Select(td => td.InnerText.Trim()).Where(td => td.Length > 0).ToList())
+                        .ToList();
+                    //Console.WriteLine(Rows.Count);
+                    foreach (List<string> row in Rows)
+                    {
+                        dt1.Rows.Add(row.ToArray());
+                    }
                 }
-                var Rows = tNode.Descendants("tr")
-                    .Where(tr => tr.Elements("td").Count() > 1)
-                    .Select(tr => tr.Elements("td").Select(td => td.InnerText.Trim()).Where(td => td.Length > 0).ToList())
-                    .ToList();
-                //Console.WriteLine(Rows.Count);
-                foreach (List<string> row in Rows)
+                catch (Exception ex)
                 {
-                    dt1.Rows.Add(row.ToArray());
+
+                }
+
+                var selRows = dt1.Select("[Settlement Point] = 'HB_SOUTH'");
+                if (selRows.Length > 0)
+                {
+                    Console.WriteLine(selRows[0][3]);
                 }
 
 
                 
-                Console.WriteLine(dt1.Rows[dt1.Rows.Count - 1]["Interval Ending"]);
-                Console.WriteLine(dt1.Rows[dt1.Rows.Count - 1]["HB_BUSAVG"]);
-                Console.WriteLine(dt1.Rows[dt1.Rows.Count - 1]["HB_SOUTH"]);
 
             }
         }
